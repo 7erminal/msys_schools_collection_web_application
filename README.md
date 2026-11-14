@@ -31,7 +31,7 @@ Endpoints, request bodies and mappings are all in `src/lib/api.ts`; DTO types in
 | User details | `GET /agent/api/get-user-details` | none (access token) |
 | Register | `POST /v1/auth/register-user` | `Username`, `Password`, `ClientId`, `FullName`, `PhoneNumber`, `Email` |
 | Name inquiry | `POST /v1/api/name-inquiry` | `MobileNumber`, `ClientId` |
-| Deposit | `POST /v1/agent/deposit` | `customerName`, `customerNumber`, `amount`, `destination`, `source`, `payment_method`, `client_id` |
+| Deposit | `POST /v1/agent/api/deposit` | `customerName`, `customerNumber`, `amount`, `destination`, `source`, `payment_method`, `client_id` |
 | Transactions | `POST /v1/agent/api/get-agent-transactions` | `AgentCode`, `FromDate`, `ToDate` |
 
 Authenticated calls send `Authorization: <TokenType> <AccessToken>`. A body with

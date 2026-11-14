@@ -28,7 +28,7 @@ export const ENDPOINTS = {
   register: '/v1/auth/register-user',
   userDetails: '/agent/api/get-user-details',
   nameInquiry: '/v1/api/name-inquiry',
-  deposit: '/v1/agent/deposit',
+  deposit: '/v1/agent/api/deposit',
   transactions: '/v1/agent/api/get-agent-transactions',
 } as const
 
