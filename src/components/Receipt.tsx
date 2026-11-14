@@ -1,21 +1,26 @@
 import { useEffect } from 'react'
-import { dateTime, money } from '../lib/store.js'
-import { Logo } from './ui.jsx'
+import { dateTime, money } from '../lib/store'
+import type { Collection } from '../lib/types'
+import { Logo } from './ui'
 
-export default function Receipt({ item, onClose }) {
+const STATUS_LABEL = { success: 'Paid', failed: 'Failed', pending: 'Pending' } as const
+const STATUS_ICON = { success: '✓', failed: '✕', pending: '…' } as const
+
+export default function Receipt({ item, onClose }: { item: Collection; onClose: () => void }) {
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const rows = [
+  const rows: [string, string][] = [
     ['Reference', item.reference],
     ['Date', dateTime(item.date)],
-    ['School', item.clientId],
+    ['School', item.school],
     ['Paid by', item.customerName || '—'],
     ['Phone', item.customerNumber || '—'],
-    ['Method', item.method === 'MOMO' ? `Mobile Money · ${item.telcoLabel}` : 'Cash'],
+    ['Channel', item.channel],
+    ['Status', item.statusText],
     ['Collected by', item.agent],
   ]
 
@@ -30,10 +35,10 @@ export default function Receipt({ item, onClose }) {
           </div>
         </header>
 
-        <div className="receipt-amount">
-          <span className="tick" aria-hidden="true">✓</span>
-          <b>{money(item.amount)}</b>
-          <small>Paid</small>
+        <div className={`receipt-amount is-${item.status}`}>
+          <span className="tick" aria-hidden="true">{STATUS_ICON[item.status]}</span>
+          <b>{money(item.amount, item.currency)}</b>
+          <small>{STATUS_LABEL[item.status]}</small>
         </div>
 
         <dl>

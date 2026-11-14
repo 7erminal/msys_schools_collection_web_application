@@ -1,25 +1,29 @@
-import { useState } from 'react'
-import { login, registerUser } from '../lib/api.js'
-import { Alert, Button, Field, Logo } from './ui.jsx'
+import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { errorMessage, login, registerUser } from '../lib/api'
+import type { Session } from '../lib/types'
+import { Alert, Button, Field, Logo } from './ui'
 
 const EMPTY = { fullName: '', username: '', phone: '', email: '', password: '', confirm: '', clientId: '' }
 
-export default function Auth({ onLogin, notice }) {
-  const [mode, setMode] = useState('login')
+type Mode = 'login' | 'register'
+type Form = typeof EMPTY
+
+export default function Auth({ onLogin, notice }: { onLogin: (s: Session) => void; notice: string }) {
+  const [mode, setMode] = useState<Mode>('login')
   const [form, setForm] = useState(EMPTY)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const isRegister = mode === 'register'
 
-  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
-  const switchMode = (m) => {
+  const set = (key: keyof Form) => (e: ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [key]: e.target.value }))
+  const switchMode = (m: Mode) => {
     setMode(m)
     setError('')
     setSuccess('')
   }
 
-  async function submit(e) {
+  async function submit(e: FormEvent) {
     e.preventDefault()
     if (loading) return
     setError('')
@@ -45,10 +49,10 @@ export default function Auth({ onLogin, notice }) {
         setMode('login')
         setSuccess('Account created. Sign in to start collecting.')
       } else {
-        onLogin(await login({ username, password: form.password, clientId }))
+        onLogin(await login(username, form.password, clientId))
       }
     } catch (err) {
-      setError(err.message || 'Something went wrong. Please try again.')
+      setError(errorMessage(err, 'Something went wrong. Please try again.'))
     } finally {
       setLoading(false)
     }

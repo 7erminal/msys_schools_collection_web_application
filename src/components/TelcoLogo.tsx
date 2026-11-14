@@ -1,8 +1,10 @@
 // Stylised brand marks drawn in SVG. To use official artwork instead, put the
 // files in src/assets and return <img src={...} /> for each id below.
-export default function TelcoLogo({ id, size = 56 }) {
+import type { TelcoId } from '../lib/types'
+
+export default function TelcoLogo({ id, size = 56 }: { id: TelcoId; size?: number }) {
   const common = { width: size, height: size, viewBox: '0 0 64 64', role: 'img' }
-  const font = { fontFamily: 'Arial, Helvetica, sans-serif', fontWeight: 900, textAnchor: 'middle' }
+  const font = { fontFamily: 'Arial, Helvetica, sans-serif', fontWeight: 900, textAnchor: 'middle' } as const
 
   if (id === 'MTN')
     return (
