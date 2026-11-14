@@ -29,12 +29,14 @@ Endpoints, request bodies and mappings are all in `src/lib/api.ts`; DTO types in
 | --- | --- | --- |
 | Login | `POST /v1/auth/user/login` | `Username`, `Password`, `ClientId` |
 | User details | `GET /agent/api/get-user-details` | none (access token) |
-| Register | `POST /v1/auth/register-user` | `Username`, `Password`, `ClientId`, `FullName`, `PhoneNumber`, `Email` |
+| Register | `POST /v1/auth/register-user` | `RequestId`, `ClientId` (number), `Name`, `Email`, `Gender`, `MobileNumber`, `Password`, `Dob`, `Username`, `Role` |
+| Refresh token | `POST /v1/auth/refresh-user-access-token` | `token` (the refresh token) |
 | Name inquiry | `POST /v1/api/name-inquiry` | `MobileNumber`, `ClientId` |
 | Deposit | `POST /v1/agent/api/deposit` | `customerName`, `customerNumber`, `amount`, `destination`, `source`, `payment_method`, `client_id` |
 | Transactions | `POST /v1/agent/api/get-agent-transactions` | `AgentCode`, `FromDate`, `ToDate` |
 
-Authenticated calls send `Authorization: <TokenType> <AccessToken>`. A body with
+Authenticated calls send `Authorization: <TokenType> <AccessToken>`. On an HTTP 401 the access token is
+refreshed once and the request replayed; if the refresh fails the agent is signed out. A body with
 `Success: false` / `StatusCode: false` is treated as an error and its message shown.
 
 Assumptions to confirm against the backend:
@@ -44,4 +46,5 @@ Assumptions to confirm against the backend:
 - `MobileNumber` is sent as typed (`0241234567`).
 - Deposit `destination` = client ID; `source` = telco code (`MTN` / `TELECEL` / `AT`) for MoMo or `CASH`; `payment_method` = `MOMO` or `CASH`.
 - Transaction `Status` text containing success/complete/approved/paid counts as successful, fail/declined/reversed/rejected as failed, anything else as pending. Only successful ones count towards "Collected today".
-- Register request fields are unchanged guesses.
+- Register: `Role` = `AGENT`, `Gender` = `Male` / `Female`, `Dob` = `YYYY-MM-DD`, `RequestId` = a generated UUID, `ClientId` = the numeric client ID typed in the form.
+- An expired access token is signalled by HTTP 401.

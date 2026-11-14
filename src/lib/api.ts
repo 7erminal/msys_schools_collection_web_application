@@ -8,8 +8,11 @@ import type {
   DepositResponse,
   NameInquiryResponse,
   PaymentMethod,
+  RegisterUserRequest,
   Session,
   Telco,
+  TokenResponseDTO,
+  Tokens,
   TxnResp,
   TxnStatus,
   UserGateway,
@@ -26,6 +29,7 @@ const BASE: string = (env.VITE_API_BASE_URL || (env.DEV ? '' : 'https://app.msys
 export const ENDPOINTS = {
   login: '/v1/auth/user/login',
   register: '/v1/auth/register-user',
+  refresh: '/v1/auth/refresh-user-access-token',
   userDetails: '/agent/api/get-user-details',
   nameInquiry: '/v1/api/name-inquiry',
   deposit: '/v1/agent/api/deposit',
@@ -54,7 +58,45 @@ export const setUnauthorizedHandler = (fn: () => void) => {
   onUnauthorized = fn
 }
 
-type Auth = Pick<Session, 'token' | 'tokenType'>
+/** Role sent when an agent registers. */
+const REGISTER_ROLE = 'AGENT'
+
+// The tokens of the signed-in session. Kept here (not only in React state) so a
+// refreshed token is used immediately by every request, including in-flight retries.
+let live: Tokens | null = null
+export const setLiveTokens = (t: Tokens | null) => {
+  live = t ? { token: t.token, tokenType: t.tokenType, refreshToken: t.refreshToken } : null
+}
+
+let onTokensRefreshed: (t: Tokens) => void = () => {}
+export const setTokensRefreshedHandler = (fn: (t: Tokens) => void) => {
+  onTokensRefreshed = fn
+}
+
+const toTokens = (t: TokenResponseDTO, previous?: Tokens): Tokens => ({
+  token: t.AccessToken,
+  tokenType: t.TokenType || previous?.tokenType || 'Bearer',
+  refreshToken: t.RefreshToken || previous?.refreshToken || '',
+})
+
+// One refresh at a time: concurrent 401s all wait for the same call.
+let refreshing: Promise<Tokens> | null = null
+function refreshTokens(current: Tokens): Promise<Tokens> {
+  refreshing ??= (async () => {
+    try {
+      const res = await request<UserLoginResponse>('POST', ENDPOINTS.refresh, { token: current.refreshToken })
+      const dto = res.Result?.Token
+      if (!dto?.AccessToken) throw new ApiError('Token refresh returned no access token.', 200)
+      const next = toTokens(dto, current)
+      live = next
+      onTokensRefreshed(next)
+      return next
+    } finally {
+      refreshing = null
+    }
+  })()
+  return refreshing
+}
 type Envelope = Record<string, unknown>
 
 const messageOf = (data: unknown): string => {
@@ -73,8 +115,13 @@ const bodySaysFailed = (data: unknown): boolean => {
   return d.Success === false || d.StatusCode === false
 }
 
-async function request<T>(method: 'GET' | 'POST', path: string, body?: object, auth?: Auth): Promise<T> {
+/**
+ * `auth`: pass the session (or fresh login tokens) for authenticated calls.
+ * The live tokens are preferred over the ones passed in, as those may be stale after a refresh.
+ */
+async function request<T>(method: 'GET' | 'POST', path: string, body?: object, auth?: Tokens, isRetry = false): Promise<T> {
   if (MOCK) return mockRequest(path, body) as Promise<T>
+  const sent = auth ? (live ?? auth) : undefined
 
   let res: Response
   try {
@@ -83,7 +130,7 @@ async function request<T>(method: 'GET' | 'POST', path: string, body?: object, a
       headers: {
         Accept: 'application/json',
         ...(body ? { 'Content-Type': 'application/json' } : {}),
-        ...(auth?.token ? { Authorization: `${auth.tokenType || 'Bearer'} ${auth.token}` } : {}),
+        ...(sent ? { Authorization: `${sent.tokenType || 'Bearer'} ${sent.token}` } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
     })
@@ -99,7 +146,20 @@ async function request<T>(method: 'GET' | 'POST', path: string, body?: object, a
     /* not JSON */
   }
 
-  if (res.status === 401 && auth?.token) {
+  if (res.status === 401 && sent) {
+    // Access token expired: refresh once and replay the request.
+    if (!isRetry && live?.refreshToken) {
+      // Another request may already have refreshed while this one was in flight.
+      const fresh =
+        live.token !== sent.token
+          ? live
+          : await refreshTokens(live).catch((err: unknown) => {
+              // Offline is not the same as an invalid session: keep the agent signed in.
+              if (err instanceof ApiError && err.status === 0) throw err
+              return null
+            })
+      if (fresh) return request<T>(method, path, body, fresh, true)
+    }
     onUnauthorized()
     throw new ApiError('Your session has expired. Please sign in again.', 401)
   }
@@ -121,7 +181,7 @@ export async function login(username: string, password: string, clientId: string
   const token = res.Result?.Token
   if (!token?.AccessToken) throw new ApiError(res.StatusMessage || 'Login failed: no access token was returned.', 200)
 
-  const auth: Auth = { token: token.AccessToken, tokenType: token.TokenType || 'Bearer' }
+  const auth = toTokens(token)
   const user = await getUserDetails(auth)
 
   return {
@@ -134,7 +194,7 @@ export async function login(username: string, password: string, clientId: string
   }
 }
 
-export async function getUserDetails(auth: Auth): Promise<UserGateway> {
+export async function getUserDetails(auth: Tokens): Promise<UserGateway> {
   const res = await request<UserGatewayResponseDTO>('GET', ENDPOINTS.userDetails, undefined, auth)
   if (!res.Result) throw new ApiError(res.StatusDesc || 'Could not load your user details.', 200)
   return res.Result
@@ -154,23 +214,32 @@ function schoolNameFor(user: UserGateway, clientId: string): string {
 }
 
 export interface RegisterInput {
-  fullName: string
+  name: string
   username: string
-  phone: string
+  gender: string
+  dob: string
+  mobileNumber: string
   email: string
   password: string
-  clientId: string
+  /** Numeric client ID of the school. */
+  clientId: number
 }
 
-export function registerUser(input: RegisterInput): Promise<unknown> {
-  return request('POST', ENDPOINTS.register, {
-    Username: input.username,
-    Password: input.password,
+export async function registerUser(input: RegisterInput): Promise<UserGateway | null> {
+  const body: RegisterUserRequest = {
+    RequestId: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     ClientId: input.clientId,
-    FullName: input.fullName,
-    PhoneNumber: input.phone,
+    Name: input.name,
     Email: input.email,
-  })
+    Gender: input.gender,
+    MobileNumber: input.mobileNumber,
+    Password: input.password,
+    Dob: input.dob,
+    Username: input.username,
+    Role: REGISTER_ROLE,
+  }
+  const res = await request<UserGatewayResponseDTO>('POST', ENDPOINTS.register, body)
+  return res.Result
 }
 
 // --------------------------------------------------------------- deposit

@@ -184,3 +184,9 @@ select { font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--teal)
 .receipt-amount.is-pending { background: #fffbeb; }
 .receipt-amount.is-pending .tick { background: #d97706; }
 .receipt-amount.is-pending small { color: #b45309; }
+
+/* ---------- form selects ---------- */
+.field select { width: 100%; padding: 13px 14px; border: 1.5px solid var(--line); border-radius: 12px; background: #fbfefd; font-size: 1rem; font-weight: 400; color: var(--ink); }
+.field select:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15); }
+.field input[type='date'] { min-height: 49px; }
+.auth-card { max-height: calc(100vh - 32px); overflow-y: auto; }
