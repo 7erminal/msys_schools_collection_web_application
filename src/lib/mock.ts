@@ -47,7 +47,7 @@ export async function mockRequest(path: string, body?: object): Promise<unknown>
       return {
         StatusCode: true,
         StatusMessage: 'Login successful',
-        Result: { UserType: 'AGENT', Token: { AccessToken: 'demo', RefreshToken: '', TokenType: 'Bearer', ExpiresIn: 3600, PinSet: true } },
+        Result: { UserType: 'AGENT', Token: { AccessToken: 'demo', RefreshToken: 'demo-refresh', TokenType: 'Bearer', ExpiresIn: 3600, PinSet: true } },
       }
     case ENDPOINTS.userDetails:
       return {
@@ -61,7 +61,8 @@ export async function mockRequest(path: string, body?: object): Promise<unknown>
         },
       }
     case ENDPOINTS.register:
-      return { Success: true, StatusMessage: 'User registered' }
+      if (b.Username === 'taken') throw new ApiError('Username already exists', 200)
+      return { Success: true, StatusDesc: 'User registered', Result: { UserId: 2, FullName: b.Name, Username: b.Username } }
     case ENDPOINTS.nameInquiry: {
       const n = String(b.MobileNumber)
       if (n.endsWith('0000')) throw new ApiError('No account found for this number', 200)

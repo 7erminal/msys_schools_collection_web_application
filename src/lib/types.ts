@@ -59,6 +59,19 @@ export interface UserGatewayResponseDTO {
   StatusDesc: string
 }
 
+export interface RegisterUserRequest {
+  RequestId: string
+  ClientId: number
+  Name: string
+  Email: string
+  Gender: string
+  MobileNumber: string
+  Password: string
+  Dob: string
+  Username: string
+  Role: string
+}
+
 export interface NameInquiryResponse {
   Success: boolean
   StatusMessage: string
@@ -124,9 +137,13 @@ export interface Telco {
   code: string
 }
 
-export interface Session {
+export interface Tokens {
   token: string
   tokenType: string
+  refreshToken: string
+}
+
+export interface Session extends Tokens {
   /** Client ID typed at login - identifies the school in every request. */
   clientId: string
   schoolName: string

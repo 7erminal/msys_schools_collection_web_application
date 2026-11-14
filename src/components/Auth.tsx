@@ -3,7 +3,8 @@ import { errorMessage, login, registerUser } from '../lib/api'
 import type { Session } from '../lib/types'
 import { Alert, Button, Field, Logo } from './ui'
 
-const EMPTY = { fullName: '', username: '', phone: '', email: '', password: '', confirm: '', clientId: '' }
+const EMPTY = { name: '', username: '', gender: '', dob: '', phone: '', email: '', password: '', confirm: '', clientId: '' }
+const today = new Date().toISOString().slice(0, 10)
 
 type Mode = 'login' | 'register'
 type Form = typeof EMPTY
@@ -16,7 +17,7 @@ export default function Auth({ onLogin, notice }: { onLogin: (s: Session) => voi
   const [success, setSuccess] = useState('')
   const isRegister = mode === 'register'
 
-  const set = (key: keyof Form) => (e: ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [key]: e.target.value }))
+  const set = (key: keyof Form) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((f) => ({ ...f, [key]: e.target.value }))
   const switchMode = (m: Mode) => {
     setMode(m)
     setError('')
@@ -32,18 +33,26 @@ export default function Auth({ onLogin, notice }: { onLogin: (s: Session) => voi
     const clientId = form.clientId.trim()
 
     if (!username || !form.password || !clientId) return setError('Username, password and school client ID are required.')
-    if (isRegister && form.password !== form.confirm) return setError('The two passwords do not match.')
+    if (isRegister) {
+      if (!form.name.trim() || !form.gender || !form.dob || !form.phone)
+        return setError('Full name, gender, date of birth and mobile number are required.')
+      if (!/^0\d{9}$/.test(form.phone)) return setError('Enter a valid 10-digit mobile number starting with 0.')
+      if (!/^\d+$/.test(clientId)) return setError('School client ID must be a number.')
+      if (form.password !== form.confirm) return setError('The two passwords do not match.')
+    }
 
     setLoading(true)
     try {
       if (isRegister) {
         await registerUser({
-          fullName: form.fullName.trim(),
+          name: form.name.trim(),
           username,
-          phone: form.phone.trim(),
+          gender: form.gender,
+          dob: form.dob,
+          mobileNumber: form.phone,
           email: form.email.trim(),
           password: form.password,
-          clientId,
+          clientId: Number(clientId),
         })
         setForm({ ...EMPTY, username, clientId })
         setMode('login')
@@ -83,21 +92,36 @@ export default function Auth({ onLogin, notice }: { onLogin: (s: Session) => voi
 
           {isRegister && (
             <Field label="Full name">
-              <input value={form.fullName} onChange={set('fullName')} autoComplete="name" placeholder="e.g. Ama Boateng" />
+              <input value={form.name} onChange={set('name')} autoComplete="name" placeholder="e.g. Ama Boateng" required />
             </Field>
           )}
           <Field label="Username">
             <input value={form.username} onChange={set('username')} autoComplete="username" autoCapitalize="none" required />
           </Field>
           {isRegister && (
-            <div className="row">
-              <Field label="Phone" hint="optional">
-                <input value={form.phone} onChange={set('phone')} inputMode="tel" autoComplete="tel" placeholder="024 000 0000" />
-              </Field>
-              <Field label="Email" hint="optional">
-                <input value={form.email} onChange={set('email')} type="email" autoComplete="email" />
-              </Field>
-            </div>
+            <>
+              <div className="row">
+                <Field label="Gender">
+                  <select value={form.gender} onChange={set('gender')} required>
+                    <option value="" disabled>Select…</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                </Field>
+                <Field label="Date of birth">
+                  <input value={form.dob} onChange={set('dob')} type="date" max={today} autoComplete="bday" required />
+                </Field>
+              </div>
+              <div className="row">
+                <Field label="Mobile number">
+                  <input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                    inputMode="numeric" autoComplete="tel" placeholder="0241234567" required />
+                </Field>
+                <Field label="Email" hint="optional">
+                  <input value={form.email} onChange={set('email')} type="email" autoComplete="email" />
+                </Field>
+              </div>
+            </>
           )}
           <Field label="Password">
             <input value={form.password} onChange={set('password')} type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} required />
@@ -108,7 +132,7 @@ export default function Auth({ onLogin, notice }: { onLogin: (s: Session) => voi
             </Field>
           )}
           <Field label="School client ID">
-            <input value={form.clientId} onChange={set('clientId')} autoCapitalize="none" autoComplete="organization" placeholder="Provided by your school" required />
+            <input value={form.clientId} onChange={set('clientId')} autoCapitalize="none" autoComplete="organization" inputMode={isRegister ? 'numeric' : 'text'} placeholder="Provided by your school" required />
           </Field>
 
           <Button type="submit" className="btn-primary btn-block" loading={loading}>
