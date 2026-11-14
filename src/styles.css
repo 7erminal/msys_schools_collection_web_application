@@ -161,3 +161,26 @@ aside { display: grid; gap: 24px; }
   .receipt { box-shadow: none; margin: 0 auto; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ---------- transactions list (v2) ---------- */
+.card-head { display: flex; align-items: center; gap: 8px; }
+.card-head h2 { margin-right: auto; }
+select { font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--teal); background: #e6f6f2; border: 0; border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+.icon-btn { width: 36px; height: 36px; border: 0; border-radius: 10px; background: #e6f6f2; color: var(--teal); font-size: 1.15rem; font-weight: 700; display: grid; place-items: center; }
+.icon-btn:disabled { opacity: 0.6; }
+.spin { display: inline-block; animation: spin 0.8s linear infinite; }
+.history { max-height: 520px; overflow-y: auto; transition: opacity 0.15s; }
+.history.is-loading { opacity: 0.5; }
+.badge { background: #cffafe; color: #0e7490; max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.amt { display: flex; flex-direction: column; align-items: flex-end; }
+.history .amt b { color: var(--ink); }
+.status { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.status.is-success { color: var(--green); }
+.status.is-failed { color: var(--red); }
+.status.is-pending { color: #b45309; }
+.receipt-amount.is-failed { background: #fef2f2; }
+.receipt-amount.is-failed .tick { background: var(--red); }
+.receipt-amount.is-failed small { color: var(--red); }
+.receipt-amount.is-pending { background: #fffbeb; }
+.receipt-amount.is-pending .tick { background: #d97706; }
+.receipt-amount.is-pending small { color: #b45309; }

@@ -1,4 +1,6 @@
-export function Alert({ kind = 'error', children }) {
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
+
+export function Alert({ kind = 'error', children }: { kind?: 'error' | 'success'; children?: ReactNode }) {
   if (!children) return null
   return (
     <div className={`alert alert-${kind}`} role={kind === 'error' ? 'alert' : 'status'}>
@@ -8,7 +10,7 @@ export function Alert({ kind = 'error', children }) {
   )
 }
 
-export function Field({ label, hint, children }) {
+export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="field">
       <span className="field-label">
@@ -20,7 +22,12 @@ export function Field({ label, hint, children }) {
   )
 }
 
-export function Button({ loading, children, className = '', ...props }) {
+export function Button({
+  loading,
+  children,
+  className = '',
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }) {
   return (
     <button {...props} className={`btn ${className}`} disabled={loading || props.disabled}>
       {loading && <span className="spinner" aria-hidden="true" />}
@@ -29,7 +36,7 @@ export function Button({ loading, children, className = '', ...props }) {
   )
 }
 
-export function Logo({ size = 44 }) {
+export function Logo({ size = 44 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
       <defs>

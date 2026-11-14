@@ -1,23 +1,37 @@
-import { useEffect, useRef, useState } from 'react'
-import { accountQuery, deposit, TELCOS } from '../lib/api.js'
-import { money } from '../lib/store.js'
-import TelcoLogo from './TelcoLogo.jsx'
-import { Alert, Button, Field } from './ui.jsx'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { deposit, errorMessage, nameInquiry, TELCOS } from '../lib/api'
+import { money } from '../lib/store'
+import type { Collection, PaymentMethod, Session, TelcoId } from '../lib/types'
+import TelcoLogo from './TelcoLogo'
+import { Alert, Button, Field } from './ui'
 
 const PHONE_RE = /^0\d{9}$/
-const IDLE = { status: 'idle', name: '', error: '' }
 
-export default function DepositForm({ session, onCollected, onViewReceipt }) {
-  const [method, setMethod] = useState('MOMO')
-  const [telcoId, setTelcoId] = useState('')
+interface Lookup {
+  status: 'idle' | 'loading' | 'ok' | 'error'
+  name: string
+  error: string
+}
+const IDLE: Lookup = { status: 'idle', name: '', error: '' }
+const METHODS: [PaymentMethod, string][] = [['MOMO', '📱 Mobile Money'], ['CASH', '💵 Cash']]
+
+interface Props {
+  session: Session
+  onCollected: () => void
+  onViewReceipt: (c: Collection) => void
+}
+
+export default function DepositForm({ session, onCollected, onViewReceipt }: Props) {
+  const [method, setMethod] = useState<PaymentMethod>('MOMO')
+  const [telcoId, setTelcoId] = useState<TelcoId | ''>('')
   const [phone, setPhone] = useState('')
-  const [lookup, setLookup] = useState(IDLE)
+  const [lookup, setLookup] = useState<Lookup>(IDLE)
   const [cashName, setCashName] = useState('')
   const [cashPhone, setCashPhone] = useState('')
   const [amount, setAmount] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [done, setDone] = useState(null)
+  const [done, setDone] = useState<Collection | null>(null)
   const [retry, setRetry] = useState(0)
   const lookupSeq = useRef(0)
 
@@ -38,18 +52,15 @@ export default function DepositForm({ session, onCollected, onViewReceipt }) {
     setLookup({ status: 'loading', name: '', error: '' })
     const timer = setTimeout(async () => {
       try {
-        const name = await accountQuery(
-          { accountNumber: phone, billerCode: telco.billerCode, clientId: session.clientId },
-          session.token,
-        )
+        const name = await nameInquiry(phone, session)
         if (seq === lookupSeq.current) setLookup({ status: 'ok', name, error: '' })
       } catch (err) {
         if (seq === lookupSeq.current)
-          setLookup({ status: 'error', name: '', error: err.message || 'Could not verify this number.' })
+          setLookup({ status: 'error', name: '', error: errorMessage(err, 'Could not verify this number.') })
       }
     }, 350)
     return () => clearTimeout(timer)
-  }, [isMomo, telco, phone, session.clientId, session.token, retry])
+  }, [isMomo, telco, phone, session, retry])
 
   const retryLookup = () => setRetry((n) => n + 1)
 
@@ -62,38 +73,26 @@ export default function DepositForm({ session, onCollected, onViewReceipt }) {
     setDone(null)
   }
 
-  async function submit(e) {
+  async function submit(e: FormEvent) {
     e.preventDefault()
     if (!canSubmit || submitting) return
     setError('')
     setSubmitting(true)
-    const details = {
-      method,
-      telco,
-      customerName: isMomo ? lookup.name : cashName.trim(),
-      customerNumber: isMomo ? phone : cashPhone,
-      amount: amountNum,
-      clientId: session.clientId,
-    }
     try {
-      const res = await deposit(details, session.token)
-      const item = {
-        id: crypto.randomUUID?.() ?? String(Date.now()),
-        reference: String(res.reference ?? 'RCPT-' + Date.now().toString(36).toUpperCase()),
-        message: res.message,
-        date: new Date().toISOString(),
-        method,
-        telcoLabel: isMomo ? telco.label : '',
-        customerName: details.customerName,
-        customerNumber: details.customerNumber,
-        amount: amountNum,
-        clientId: session.clientId,
-        agent: session.username,
-      }
-      onCollected(item)
+      const item = await deposit(
+        {
+          method,
+          telco,
+          customerName: isMomo ? lookup.name : cashName.trim(),
+          customerNumber: isMomo ? phone : cashPhone,
+          amount: amountNum,
+        },
+        session,
+      )
       setDone(item)
+      onCollected()
     } catch (err) {
-      setError(err.message || 'The deposit could not be completed. Please try again.')
+      setError(errorMessage(err, 'The deposit could not be completed. Please try again.'))
     } finally {
       setSubmitting(false)
     }
@@ -104,11 +103,11 @@ export default function DepositForm({ session, onCollected, onViewReceipt }) {
       <section className="card success-card" role="status">
         <div className="big-tick" aria-hidden="true">✓</div>
         <h2>Deposit successful</h2>
-        <p className="success-amount">{money(done.amount)}</p>
+        <p className="success-amount">{money(done.amount, done.currency)}</p>
         <p className="muted">
-          {done.customerName ? `from ${done.customerName} ` : ''}to <b>{done.clientId}</b>
+          {done.customerName ? `from ${done.customerName} ` : ''}to <b>{done.school}</b>
         </p>
-        {done.message && <p className="muted small">{done.message}</p>}
+        <p className="muted small">{done.statusText}</p>
         <p className="ref">Ref: {done.reference}</p>
         <div className="actions">
           <button className="btn btn-ghost" onClick={() => onViewReceipt(done)} type="button">View receipt</button>
@@ -121,11 +120,11 @@ export default function DepositForm({ session, onCollected, onViewReceipt }) {
     <form className="card" onSubmit={submit} noValidate>
       <h2>New deposit</h2>
       <p className="muted">
-        Into <b>{session.clientId}</b>'s account
+        Into <b>{session.schoolName}</b>'s account
       </p>
 
       <div className="segmented" role="radiogroup" aria-label="Payment method">
-        {[['MOMO', '📱 Mobile Money'], ['CASH', '💵 Cash']].map(([id, label]) => (
+        {METHODS.map(([id, label]) => (
           <button key={id} type="button" role="radio" aria-checked={method === id} className={method === id ? 'active' : ''}
             onClick={() => { setMethod(id); setError('') }} disabled={submitting}>
             {label}

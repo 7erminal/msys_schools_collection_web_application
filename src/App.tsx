@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
-import Auth from './components/Auth.jsx'
-import Dashboard from './components/Dashboard.jsx'
-import { setUnauthorizedHandler } from './lib/api.js'
-import { loadSession, saveSession } from './lib/store.js'
+import Auth from './components/Auth'
+import Dashboard from './components/Dashboard'
+import { setUnauthorizedHandler } from './lib/api'
+import { loadSession, saveSession } from './lib/store'
+import type { Session } from './lib/types'
 
 export default function App() {
-  const [session, setSession] = useState(loadSession)
+  const [session, setSession] = useState<Session | null>(loadSession)
   const [notice, setNotice] = useState('')
 
-  const update = (s, msg = '') => {
+  const update = (s: Session | null, msg = '') => {
     saveSession(s)
     setSession(s)
     setNotice(msg)
