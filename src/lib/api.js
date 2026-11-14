@@ -135,7 +135,7 @@ export async function accountQuery({ accountNumber, billerCode, clientId }, toke
  */
 export async function deposit({ method, telco, customerName, customerNumber, amount, clientId }, token) {
   const data = await request(
-    '/v1/agent/deposit',
+    '/v1/agent/api/deposit',
     {
       customerName,
       customerNumber,
