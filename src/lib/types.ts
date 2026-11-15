@@ -151,6 +151,7 @@ export interface Session extends Tokens {
   fullName: string
   /** Sent as AgentCode when fetching transactions. */
   agentCode: string
+  phoneNumber: string
 }
 
 export type TxnStatus = 'success' | 'failed' | 'pending'

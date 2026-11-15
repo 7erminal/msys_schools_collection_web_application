@@ -191,6 +191,7 @@ export async function login(username: string, password: string, clientId: string
     username: user.Username || username,
     fullName: user.FullName || user.Username || username,
     agentCode: user.Username || username,
+    phoneNumber: user.PhoneNumber || '',
   }
 }
 
@@ -273,7 +274,7 @@ export async function deposit(input: DepositInput, session: Session): Promise<Co
   const isMomo = input.method === 'MOMO'
   const body: AgentDepositRequest = {
     customerName: input.customerName,
-    customerNumber: input.customerNumber,
+    customerNumber: session.phoneNumber,
     amount: input.amount,
     destination: input.customerNumber,
     source: isMomo && input.telco ? input.telco.code : 'CASH',
@@ -285,7 +286,7 @@ export async function deposit(input: DepositInput, session: Session): Promise<Co
     reference: res.Result?.TransactionReference || '—',
     date: new Date().toISOString(),
     customerName: input.customerName,
-    customerNumber: input.customerNumber,
+    customerNumber: session.phoneNumber,
     amount: res.Result?.Amount || input.amount,
     currency: res.Result?.Currency || 'GHS',
     channel: isMomo ? `Mobile Money · ${input.telco?.label ?? ''}` : 'Cash',
