@@ -275,7 +275,7 @@ export async function deposit(input: DepositInput, session: Session): Promise<Co
     customerName: input.customerName,
     customerNumber: input.customerNumber,
     amount: input.amount,
-    destination: session.clientId,
+    destination: input.customerNumber,
     source: isMomo && input.telco ? input.telco.code : 'CASH',
     payment_method: input.method,
     client_id: session.clientId,
