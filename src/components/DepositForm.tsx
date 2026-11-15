@@ -13,7 +13,7 @@ interface Lookup {
   error: string
 }
 const IDLE: Lookup = { status: 'idle', name: '', error: '' }
-const METHODS: [PaymentMethod, string][] = [['MOMO', '📱 Mobile Money'], ['CASH', '💵 Cash']]
+const METHODS: [PaymentMethod, string][] = [['MOMO', 'Mobile Money'], ['CASH', 'Cash']]
 
 interface Props {
   session: Session
