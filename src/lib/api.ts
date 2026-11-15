@@ -30,7 +30,7 @@ export const ENDPOINTS = {
   login: '/v1/auth/user/login',
   register: '/v1/auth/register-user',
   refresh: '/v1/auth/refresh-user-access-token',
-  userDetails: '/agent/api/get-user-details',
+  userDetails: '/v1/agent/api/get-user-details',
   nameInquiry: '/v1/api/name-inquiry',
   deposit: '/v1/agent/api/deposit',
   transactions: '/v1/agent/api/get-agent-transactions',
