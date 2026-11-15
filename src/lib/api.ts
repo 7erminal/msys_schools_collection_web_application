@@ -195,7 +195,7 @@ export async function login(username: string, password: string, clientId: string
 }
 
 export async function getUserDetails(auth: Tokens): Promise<UserGateway> {
-  const res = await request<UserGatewayResponseDTO>('GET', ENDPOINTS.userDetails, undefined, auth)
+  const res = await request<UserGatewayResponseDTO>('POST', ENDPOINTS.userDetails, undefined, auth)
   if (!res.Result) throw new ApiError(res.StatusDesc || 'Could not load your user details.', 200)
   return res.Result
 }
