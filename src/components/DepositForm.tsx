@@ -102,7 +102,7 @@ export default function DepositForm({ session, onCollected, onViewReceipt }: Pro
     return (
       <section className="card success-card" role="status">
         <div className="big-tick" aria-hidden="true">✓</div>
-        <h2>Deposit successful</h2>
+        <h2>Payment successful</h2>
         <p className="success-amount">{money(done.amount, done.currency)}</p>
         <p className="muted">
           {done.customerName ? `from ${done.customerName} ` : ''}to <b>{done.school}</b>
@@ -111,14 +111,14 @@ export default function DepositForm({ session, onCollected, onViewReceipt }: Pro
         <p className="ref">Ref: {done.reference}</p>
         <div className="actions">
           <button className="btn btn-ghost" onClick={() => onViewReceipt(done)} type="button">View receipt</button>
-          <button className="btn btn-primary" onClick={reset} type="button" autoFocus>New deposit</button>
+          <button className="btn btn-primary" onClick={reset} type="button" autoFocus>New payment</button>
         </div>
       </section>
     )
 
   return (
     <form className="card" onSubmit={submit} noValidate>
-      <h2>New deposit</h2>
+      <h2>New payment</h2>
       <p className="muted">
         Into <b>{session.schoolName}</b>'s account
       </p>
